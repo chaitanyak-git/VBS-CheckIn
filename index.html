@@ -341,28 +341,34 @@ function setScanMode(m){
 }
 
 // ── SCANNER ────────────────────────────────────────────────────────────────
+function showScanError(msg){
+  document.getElementById('reader').innerHTML=
+    '<div style="padding:24px;text-align:center;font-size:13px">'+
+    '<div style="color:var(--red,#c0392b);margin-bottom:8px">⚠️ Camera unavailable</div>'+
+    '<div style="color:var(--muted);margin-bottom:12px;font-size:11px">'+msg+'</div>'+
+    '<button onclick="setScanMode(\'id\')" style="padding:8px 16px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px">Use Child ID instead</button>'+
+    '</div>';
+}
+
 function startScanner(){
   if(scanMode!=='qr') return;
-  scanner=new Html5Qrcode('reader');
   const config={fps:10,qrbox:{width:210,height:210}};
   const onDecode=decoded=>{lookupById(decoded.trim().toUpperCase());stopScanner();};
-  // Try rear camera first (ideal = soft constraint, won't hard-fail)
-  scanner.start({facingMode:{ideal:'environment'}},config,onDecode,()=>{})
-    .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
-    .catch(()=>{
-      // Rear camera failed — retry with any available camera
-      scanner.start({},config,onDecode,()=>{})
-        .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
-        .catch(err=>{
-          const msg=err&&err.message?err.message:'permission denied or no camera found';
-          document.getElementById('reader').innerHTML=
-            '<div style="padding:24px;text-align:center;font-size:13px">'+
-            '<div style="color:var(--red,#c0392b);margin-bottom:8px">⚠️ Camera unavailable</div>'+
-            '<div style="color:var(--muted);margin-bottom:12px;font-size:11px">'+msg+'</div>'+
-            '<button onclick="setScanMode(\'id\')" style="padding:8px 16px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px">Use Child ID instead</button>'+
-            '</div>';
-        });
-    });
+
+  // getCameras() triggers the browser permission prompt and returns camera list
+  Html5Qrcode.getCameras().then(cameras=>{
+    if(!cameras||cameras.length===0){showScanError('No cameras found on this device.');return;}
+    // Prefer rear-facing camera; fall back to the first available
+    const rear=cameras.find(c=>/back|rear|environment/i.test(c.label));
+    const camId=(rear||cameras[0]).id;
+    scanner=new Html5Qrcode('reader');
+    scanner.start(camId,config,onDecode,()=>{})
+      .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
+      .catch(err=>showScanError(err&&err.message?err.message:'Failed to open camera.'));
+  }).catch(err=>{
+    const msg=err&&err.message?err.message:'Permission denied or camera not accessible.';
+    showScanError(msg);
+  });
 }
 function stopScanner(){if(scanner&&scanning){scanner.stop().catch(()=>{});scanning=false;}}
 
