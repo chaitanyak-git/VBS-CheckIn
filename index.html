@@ -2,745 +2,637 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Event Check-In</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
-  :root {
-    --teal: #1D9E75;
-    --teal-light: #E1F5EE;
-    --teal-dark: #085041;
-    --coral: #D85A30;
-    --coral-light: #FAECE7;
-    --gray: #5F5E5A;
-    --gray-light: #F1EFE8;
-    --border: #D3D1C7;
-    --text: #2C2C2A;
-    --text-muted: #888780;
-    --bg: #ffffff;
-    --card-bg: #F8F7F4;
-    --success: #0F6E56;
-    --danger: #993C1D;
-    --warning: #854F0B;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--gray-light);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 16px;
-  }
-  header {
-    background: var(--teal-dark);
-    color: #fff;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
-  header .day-badge {
-    background: rgba(255,255,255,0.2);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-  }
-  .tabs {
-    display: flex;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-  }
-  .tab {
-    flex: 1;
-    padding: 14px;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    border: none;
-    background: none;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-  }
-  .tab.active {
-    color: var(--teal);
-    border-bottom-color: var(--teal);
-  }
-  .panel { display: none; padding: 16px; }
-  .panel.active { display: block; }
-
-  /* SCAN PANEL */
-  #reader {
-    width: 100%;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #000;
-  }
-  #reader video { border-radius: var(--radius); }
-  .scan-hint {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 13px;
-    margin-top: 10px;
-  }
-  .manual-entry {
-    margin-top: 16px;
-    display: flex;
-    gap: 8px;
-  }
-  .manual-entry input {
-    flex: 1;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
-  }
-  .manual-entry input:focus { outline: none; border-color: var(--teal); }
-  .btn {
-    padding: 12px 18px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .btn:active { opacity: 0.75; }
-  .btn-teal { background: var(--teal); color: #fff; }
-  .btn-coral { background: var(--coral); color: #fff; }
-  .btn-outline { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-  .btn-sm { padding: 8px 14px; font-size: 13px; }
-
-  /* CHILD CARD */
-  .child-card {
-    background: var(--bg);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-top: 16px;
-    border: 1px solid var(--border);
-  }
-  .child-card.found { border-color: var(--teal); }
-  .child-card.error { border-color: var(--coral); }
-  .child-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 16px;
-  }
-  .child-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--teal-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--teal-dark);
-    flex-shrink: 0;
-  }
-  .child-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
-  .child-id { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .info-row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
-  .info-label {
-    color: var(--text-muted);
-    font-size: 12px;
-    min-width: 90px;
-    padding-top: 1px;
-  }
-  .info-value { color: var(--text); font-weight: 500; }
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .status-in { background: var(--teal-light); color: var(--success); }
-  .status-out { background: var(--gray-light); color: var(--gray); }
-  .status-alert { background: #FAEEDA; color: var(--warning); }
-  .alert-box {
-    background: #FAEEDA;
-    border: 1px solid #FAC775;
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    font-size: 13px;
-    color: var(--warning);
-    margin-bottom: 12px;
-    font-weight: 500;
-  }
-  .day-grid {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-    flex-wrap: wrap;
-  }
-  .day-pill {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .day-present { background: var(--teal-light); color: var(--success); }
-  .day-absent { background: var(--gray-light); color: var(--text-muted); }
-  .day-today { background: var(--teal); color: #fff; }
-  .action-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-  }
-  .action-row .btn { flex: 1; }
-  .pin-verify {
-    background: var(--coral-light);
-    border: 1px solid #F0997B;
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    margin-top: 12px;
-    display: none;
-  }
-  .pin-verify.show { display: block; }
-  .pin-verify label { font-size: 13px; color: var(--coral); font-weight: 600; display: block; margin-bottom: 8px; }
-  .pin-verify input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #F0997B;
-    border-radius: var(--radius-sm);
-    font-size: 20px;
-    letter-spacing: 4px;
-    text-align: center;
-    background: var(--bg);
-  }
-  .pin-verify input:focus { outline: none; border-color: var(--coral); }
-
-  /* SEARCH PANEL */
-  .search-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .search-bar input {
-    flex: 1;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
-  }
-  .search-bar input:focus { outline: none; border-color: var(--teal); }
-  .child-list-item {
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .child-list-item:hover { border-color: var(--teal); }
-  .child-list-avatar {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: var(--teal-light);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700;
-    color: var(--teal-dark);
-    flex-shrink: 0;
-  }
-  .child-list-info { flex: 1; }
-  .child-list-name { font-weight: 600; font-size: 15px; }
-  .child-list-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .empty-state {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 40px 20px;
-    font-size: 14px;
-  }
-
-  /* STATS PANEL */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .stat-card {
-    background: var(--bg);
-    border-radius: var(--radius);
-    padding: 18px;
-    border: 1px solid var(--border);
-    text-align: center;
-  }
-  .stat-num { font-size: 32px; font-weight: 700; color: var(--teal); }
-  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-  .stat-card.coral .stat-num { color: var(--coral); }
-  .activity-feed {
-    background: var(--bg);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    overflow: hidden;
-  }
-  .activity-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .activity-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-  }
-  .activity-item:last-child { border-bottom: none; }
-  .activity-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .dot-in { background: var(--teal); }
-  .dot-out { background: var(--coral); }
-  .activity-time { margin-left: auto; font-size: 12px; color: var(--text-muted); }
-
-  /* TOAST */
-  .toast {
-    position: fixed;
-    bottom: 24px; left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: var(--text);
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 24px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: transform 0.3s ease;
-    z-index: 999;
-    white-space: nowrap;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.success { background: var(--success); }
-  .toast.error { background: var(--danger); }
-
-  /* CONFIG MODAL */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 100;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--bg);
-    border-radius: var(--radius);
-    padding: 24px;
-    width: 100%;
-    max-width: 400px;
-  }
-  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-  .form-group { margin-bottom: 16px; }
-  .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-  .form-group input {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
-  }
-  .form-group input:focus { outline: none; border-color: var(--teal); }
-  .form-group small { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; }
+:root{--teal:#1D9E75;--teal-l:#E1F5EE;--teal-d:#085041;--coral:#D85A30;--coral-l:#FAECE7;--amber:#BA7517;--amber-l:#FAEEDA;--gray:#5F5E5A;--gray-l:#F1EFE8;--border:#D3D1C7;--text:#2C2C2A;--muted:#888780;--bg:#ffffff;--card:#F8F7F4;--success:#0F6E56;--danger:#993C1D;--r:12px;--rs:8px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--gray-l);color:var(--text);min-height:100vh;font-size:16px}
+header{background:var(--teal-d);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+header h1{font-size:16px;font-weight:700}
+.day-badge{background:rgba(255,255,255,0.18);padding:4px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600}
+.tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:48px;z-index:40}
+.tab{flex:1;padding:11px 2px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.3px}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.panel{display:none;padding:14px;padding-bottom:40px}
+.panel.active{display:block}
+/* scan */
+#reader{width:100%;border-radius:var(--r);overflow:hidden;background:#111;min-height:180px;display:flex;align-items:center;justify-content:center}
+.scan-hint{text-align:center;color:var(--muted);font-size:12px;margin:8px 0 12px}
+.scan-toggle{display:flex;gap:8px;margin-bottom:12px}
+.scan-toggle button{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.scan-toggle button.active{background:var(--teal-l);border-color:var(--teal);color:var(--teal-d)}
+.id-entry{display:flex;gap:8px;margin-bottom:12px}
+.id-entry input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:16px;background:var(--bg);color:var(--text);font-family:monospace;letter-spacing:1px;text-transform:uppercase}
+.id-entry input::placeholder{font-family:-apple-system,sans-serif;letter-spacing:0;text-transform:none}
+.id-entry input:focus{outline:none;border-color:var(--teal)}
+/* buttons */
+.btn{padding:12px 16px;border:none;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;transition:opacity 0.15s;white-space:nowrap}
+.btn:active{opacity:0.7}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-coral{background:var(--coral);color:#fff}
+.btn-outline{background:var(--bg);color:var(--text);border:1.5px solid var(--border)}
+.btn-sm{padding:8px 12px;font-size:13px}
+.btn-full{width:100%}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+/* child card */
+.child-card{background:var(--bg);border-radius:var(--r);padding:16px;margin-top:12px;border:1.5px solid var(--border)}
+.child-card.found{border-color:var(--teal)}
+.child-card.err{border-color:var(--coral)}
+.child-header{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.child-photo{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--teal-l);flex-shrink:0}
+.child-avatar{width:72px;height:72px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:var(--teal-d);flex-shrink:0}
+.child-name{font-size:19px;font-weight:700;line-height:1.2}
+.child-id{font-size:12px;color:var(--muted);margin-top:2px;font-family:monospace}
+.child-class{font-size:11px;color:var(--teal-d);background:var(--teal-l);padding:2px 8px;border-radius:10px;display:inline-block;margin-top:4px;font-weight:600}
+.alert-box{background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rs);padding:10px 12px;font-size:13px;color:var(--amber);margin-bottom:10px;font-weight:500;line-height:1.4}
+.info-row{display:flex;gap:8px;align-items:baseline;margin-bottom:6px;font-size:14px}
+.info-label{color:var(--muted);font-size:11px;min-width:84px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.4px}
+.info-val{color:var(--text);font-weight:500}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
+.s-in{background:var(--teal-l);color:var(--success)}
+.s-out{background:var(--gray-l);color:var(--gray)}
+.s-ab{background:var(--gray-l);color:var(--muted)}
+.day-grid{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.dp{padding:3px 9px;border-radius:14px;font-size:11px;font-weight:700}
+.dp-present{background:var(--teal-l);color:var(--success)}
+.dp-absent{background:var(--gray-l);color:var(--muted)}
+.dp-today{background:var(--teal);color:#fff}
+.action-row{display:flex;gap:8px;margin-top:14px}
+.action-row .btn{flex:1}
+/* pin */
+.pin-box{background:var(--coral-l);border:1.5px solid #F0997B;border-radius:var(--rs);padding:14px;margin-top:10px;display:none}
+.pin-box.show{display:block}
+.pin-box label{font-size:11px;color:var(--coral);font-weight:700;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px}
+.pin-row{display:flex;gap:8px}
+.pin-row input{flex:1;padding:12px;border:1.5px solid #F0997B;border-radius:var(--rs);font-size:24px;letter-spacing:8px;text-align:center;background:var(--bg);font-family:monospace}
+.pin-row input:focus{outline:none;border-color:var(--coral)}
+.pin-err{font-size:12px;color:var(--danger);margin-top:6px}
+.locked-box{background:#FCEBEB;border:1.5px solid #F09595;border-radius:var(--rs);padding:12px;margin-top:10px;font-size:13px;color:var(--danger);font-weight:500}
+/* search */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--bg);color:var(--text)}
+.search-wrap input:focus{outline:none;border-color:var(--teal)}
+.si{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.child-item{background:var(--bg);border-radius:var(--rs);padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.15s}
+.child-item:active{border-color:var(--teal)}
+.item-av{width:40px;height:40px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--teal-d);flex-shrink:0}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-meta{font-size:11px;color:var(--muted);margin-top:1px}
+.item-st{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+.ist-in{background:var(--teal-l);color:var(--success)}
+.ist-out{background:var(--gray-l);color:var(--gray)}
+.ist-ab{background:var(--gray-l);color:var(--muted)}
+/* register */
+.sec-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin:16px 0 8px}
+.sec-label:first-of-type{margin-top:0}
+.form-row{display:flex;gap:8px}
+.fg{flex:1;margin-bottom:10px}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.3px}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--bg);color:var(--text);font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--teal)}
+.fg textarea{resize:vertical;min-height:70px;font-size:14px;line-height:1.5}
+.photo-zone{border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color 0.2s}
+.photo-zone:hover{border-color:var(--teal)}
+.photo-prev{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block;border:2px solid var(--teal-l)}
+.photo-hint{font-size:13px;color:var(--muted)}
+.photo-hint strong{display:block;font-size:14px;color:var(--text);margin-bottom:3px}
+.reg-done{background:var(--teal-l);border:1.5px solid var(--teal);border-radius:var(--r);padding:24px;text-align:center;display:none}
+.reg-done h3{font-size:18px;font-weight:700;color:var(--teal-d);margin-bottom:6px}
+.reg-id{font-size:34px;font-weight:700;font-family:monospace;color:var(--teal);margin:8px 0}
+.reg-done p{font-size:13px;color:var(--teal-d);line-height:1.5}
+/* stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:var(--bg);border-radius:var(--r);padding:16px;border:1px solid var(--border);text-align:center}
+.stat-num{font-size:34px;font-weight:700;color:var(--teal);line-height:1}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.4px}
+.stat-card.c2 .stat-num{color:var(--coral)}
+.bk-table{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;margin-bottom:12px}
+.bk-hdr{padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:flex;gap:8px}
+.bk-row{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;font-size:13px;align-items:center}
+.bk-row:last-child{border-bottom:none}
+.bk-name{flex:1;font-weight:500}
+.bk-n{min-width:38px;text-align:right;font-weight:600;font-family:monospace}
+.c-in{color:var(--success)}.c-out{color:var(--coral)}
+.af{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);overflow:hidden}
+.af-hdr{padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.af-item{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:13px}
+.af-item:last-child{border-bottom:none}
+.af-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.d-in{background:var(--teal)}.d-out{background:var(--coral)}.d-reg{background:var(--amber)}
+.af-time{margin-left:auto;font-size:11px;color:var(--muted);font-family:monospace}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--bg);border-radius:var(--r) var(--r) 0 0;padding:24px 20px 40px;width:100%;max-width:480px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.modal-row{display:flex;gap:10px;margin-top:4px}
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;transition:transform 0.3s ease;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--success)}.toast.err{background:var(--danger)}.toast.warn{background:var(--amber)}
+.empty{text-align:center;color:var(--muted);padding:36px 20px;font-size:14px}
 </style>
 </head>
 <body>
 
 <header>
   <h1>🎪 Event Check-In</h1>
-  <span class="day-badge" id="day-label">Day 1</span>
+  <span class="day-badge" id="day-label" onclick="showConfig()">Day 1 ▾</span>
 </header>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('scan')">📷 Scan</button>
   <button class="tab" onclick="switchTab('search')">🔍 Search</button>
-  <button class="tab" onclick="switchTab('stats')">📊 Today</button>
+  <button class="tab" onclick="switchTab('register')">➕ Register</button>
+  <button class="tab" onclick="switchTab('stats')">📊 Stats</button>
 </div>
 
-<!-- SCAN PANEL -->
+<!-- SCAN -->
 <div class="panel active" id="panel-scan">
-  <div id="reader"></div>
-  <p class="scan-hint">Point camera at parent's QR code</p>
-  <div class="manual-entry">
-    <input type="text" id="manual-id" placeholder="Or type child ID (e.g. C-042)" autocomplete="off">
-    <button class="btn btn-teal" onclick="lookupById(document.getElementById('manual-id').value.trim())">Go</button>
+  <div class="scan-toggle">
+    <button class="active" id="btn-qr" onclick="setScanMode('qr')">📷 QR Code</button>
+    <button id="btn-id" onclick="setScanMode('id')">⌨️ Child ID</button>
+  </div>
+  <div id="qr-section">
+    <div id="reader"><div id="rph" style="color:var(--muted);font-size:13px;padding:32px;text-align:center">Starting camera…</div></div>
+    <p class="scan-hint">Point camera at parent's QR code</p>
+  </div>
+  <div id="id-section" style="display:none">
+    <div class="id-entry">
+      <input type="text" id="manual-id" placeholder="Type Child ID e.g. C-042"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        onkeydown="if(event.key==='Enter')lookupById(this.value.trim().toUpperCase())">
+      <button class="btn btn-teal" onclick="lookupById(document.getElementById('manual-id').value.trim().toUpperCase())">Look up</button>
+    </div>
   </div>
   <div id="child-result"></div>
 </div>
 
-<!-- SEARCH PANEL -->
+<!-- SEARCH -->
 <div class="panel" id="panel-search">
-  <div class="search-bar">
-    <input type="text" id="search-input" placeholder="Search by child or parent name..." oninput="doSearch(this.value)">
+  <div class="search-wrap">
+    <span class="si">🔍</span>
+    <input type="text" id="search-input" placeholder="Name, parent, church, or location…" oninput="doSearch(this.value)" autocomplete="off">
   </div>
-  <div id="search-results"><div class="empty-state">Start typing to search</div></div>
+  <div id="search-results"><div class="empty">Start typing to search</div></div>
 </div>
 
-<!-- STATS PANEL -->
+<!-- REGISTER -->
+<div class="panel" id="panel-register">
+  <div id="reg-form">
+    <p class="sec-label">Child details</p>
+    <div class="form-row">
+      <div class="fg"><label>First name *</label><input type="text" id="r-fn"></div>
+      <div class="fg"><label>Last name *</label><input type="text" id="r-ln"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Date of birth</label><input type="date" id="r-dob"></div>
+      <div class="fg"><label>Age</label><input type="number" id="r-age" min="1" max="18" placeholder="e.g. 8"></div>
+    </div>
+    <div class="fg"><label>Class group</label><input type="text" id="r-cls" placeholder="e.g. Junior A"></div>
+
+    <p class="sec-label">Parent / Guardian</p>
+    <div class="fg"><label>Parent / Guardian name *</label><input type="text" id="r-pn"></div>
+    <div class="fg"><label>Parent WhatsApp number *</label><input type="tel" id="r-pp" placeholder="+91 98765 43210"></div>
+    <div class="fg"><label>Participant phone</label><input type="tel" id="r-cp"></div>
+
+    <p class="sec-label">Church &amp; location</p>
+    <div class="form-row">
+      <div class="fg"><label>Church name</label><input type="text" id="r-ch"></div>
+      <div class="fg"><label>Location</label><input type="text" id="r-loc"></div>
+    </div>
+
+    <p class="sec-label">Health &amp; support</p>
+    <div class="fg"><label>Medical / allergies</label><textarea id="r-med" placeholder="List any allergies or conditions. Write 'None' if not applicable."></textarea></div>
+    <div class="fg"><label>Special needs</label><textarea id="r-sn" placeholder="Any additional support required. Write 'None' if not applicable."></textarea></div>
+
+    <p class="sec-label">Child photo</p>
+    <div class="photo-zone" onclick="document.getElementById('photo-in').click()">
+      <img id="photo-prev" class="photo-prev" src="" style="display:none">
+      <div id="photo-ph"><div class="photo-hint"><strong>📷 Tap to take photo</strong>Shown to volunteers at pickup for identity check</div></div>
+    </div>
+    <input type="file" id="photo-in" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+
+    <div class="fg" style="margin-top:4px"><label>Volunteer access code *</label><input type="password" id="r-code" placeholder="Ask your event coordinator" autocomplete="off"></div>
+    <button class="btn btn-teal btn-full" style="margin-top:10px" onclick="submitReg()">Register &amp; Send WhatsApp →</button>
+  </div>
+
+  <div class="reg-done" id="reg-done">
+    <h3>✅ Registered!</h3>
+    <div class="reg-id" id="reg-id-disp">C-000</div>
+    <p id="reg-wa-msg">WhatsApp with QR code sent to parent.</p>
+    <button class="btn btn-teal btn-full" style="margin-top:16px" onclick="resetReg()">Register another child</button>
+  </div>
+</div>
+
+<!-- STATS -->
 <div class="panel" id="panel-stats">
   <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-num" id="stat-in">0</div>
-      <div class="stat-label">Checked in today</div>
-    </div>
-    <div class="stat-card coral">
-      <div class="stat-num" id="stat-out">0</div>
-      <div class="stat-label">Checked out</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="stat-present">0</div>
-      <div class="stat-label">Still here</div>
-    </div>
-    <div class="stat-card coral">
-      <div class="stat-num" id="stat-total">0</div>
-      <div class="stat-label">Total registered</div>
-    </div>
+    <div class="stat-card"><div class="stat-num" id="s-in">–</div><div class="stat-lbl">Checked in</div></div>
+    <div class="stat-card c2"><div class="stat-num" id="s-out">–</div><div class="stat-lbl">Checked out</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-pres">–</div><div class="stat-lbl">Still here</div></div>
+    <div class="stat-card c2"><div class="stat-num" id="s-tot">–</div><div class="stat-lbl">Registered</div></div>
   </div>
-  <div class="activity-feed">
-    <div class="activity-header">Recent activity</div>
-    <div id="activity-list"><div class="empty-state" style="padding:20px">No activity yet today</div></div>
+  <div class="bk-table" id="loc-tbl" style="display:none">
+    <div class="bk-hdr"><span class="bk-name">Location</span><span class="bk-n c-in">In</span><span class="bk-n c-out">Out</span><span class="bk-n">Total</span></div>
+    <div id="loc-rows"></div>
+  </div>
+  <div class="af">
+    <div class="af-hdr">Recent activity — this device</div>
+    <div id="act-list"><div class="empty" style="padding:16px">No activity yet</div></div>
   </div>
 </div>
 
 <!-- CONFIG MODAL -->
-<div class="modal-overlay show" id="config-modal">
+<div class="overlay show" id="cfg-overlay">
   <div class="modal">
-    <h2>Connect to Google Sheets</h2>
-    <p>Enter your Sheet details to load the registered children list.</p>
-    <div class="form-group">
-      <label>Google Sheet ID</label>
-      <input type="text" id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
-      <small>From your Sheet URL: docs.google.com/spreadsheets/d/<strong>[ID]</strong>/edit</small>
+    <h2>Connect to API</h2>
+    <p>Paste the API URL from your AWS deployment. This is saved on this device — you only need to do this once.</p>
+    <div class="fg"><label>API Gateway URL</label>
+      <input type="url" id="cfg-api" placeholder="https://xxxxxx.execute-api.ap-south-1.amazonaws.com/prod">
     </div>
-    <div class="form-group">
-      <label>Google Apps Script Web App URL</label>
-      <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/YOUR_ID/exec">
-      <small>Deploy your Apps Script as a web app (see setup guide)</small>
+    <div class="form-row" style="gap:10px">
+      <div class="fg"><label>Event day</label><input type="number" id="cfg-day" value="1" min="1" max="5"></div>
+      <div class="fg"><label>Your device name</label><input type="text" id="cfg-dev" placeholder="e.g. Gate A — Priya"></div>
     </div>
-    <div class="form-group">
-      <label>Event day (1–5)</label>
-      <input type="number" id="cfg-day" value="1" min="1" max="5">
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-outline btn-sm" onclick="loadDemo()">Load demo data</button>
-      <button class="btn btn-teal" style="flex:1" onclick="saveConfig()">Connect</button>
+    <div class="modal-row">
+      <button class="btn btn-outline btn-sm" onclick="loadDemo()">Demo mode</button>
+      <button class="btn btn-teal" style="flex:1" onclick="saveConfig()">Connect →</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── STATE ──────────────────────────────────────────────────────────────────
-let config = JSON.parse(localStorage.getItem('checkin_config') || '{}');
-let children = [];
-let activity = [];
-let currentDay = config.day || 1;
-let scanner = null;
-let scanActive = false;
-
 // ── DEMO DATA ──────────────────────────────────────────────────────────────
 const DEMO = [
-  {id:'C-001',name:'Aanya Sharma',parent:'Priya Sharma',phone:'9876543210',pin:'4821',notes:'',alert:'',checkins:['Day1','Day2'],checkout:''},
-  {id:'C-002',name:'Rohan Mehta',parent:'Amit Mehta',phone:'9845012345',pin:'7362',notes:'Nut allergy',alert:'ALLERGY: No nuts',checkins:['Day1'],checkout:''},
-  {id:'C-003',name:'Kavya Nair',parent:'Sunita Nair',phone:'9901234567',pin:'1947',notes:'',alert:'',checkins:[],checkout:''},
-  {id:'C-004',name:'Arjun Patel',parent:'Deepak Patel',phone:'9812345678',pin:'5539',notes:'',alert:'CUSTODY: Only parent on record may collect',checkins:['Day1','Day2'],checkout:''},
-  {id:'C-005',name:'Ishaan Verma',parent:'Ritu Verma',phone:'9823456789',pin:'2074',notes:'Shy, may need time to settle',alert:'',checkins:['Day1'],checkout:'14:30'},
-  {id:'C-006',name:'Meera Iyer',parent:'Lakshmi Iyer',phone:'9856789012',pin:'6618',notes:'',alert:'',checkins:[],checkout:''},
+  {childId:'C-001',firstName:'Aanya',lastName:'Sharma',fullName:'Aanya Sharma',dob:'2016-03-14',age:'9',classGroup:'Junior A',church:'Grace Church',location:'Bengaluru',parentName:'Priya Sharma',parentPhone:'••••3210',alerts:[],checkins:{Day1:'08:42',Day2:'09:05'},checkouts:{},photoUrl:null,pinLocked:false},
+  {childId:'C-002',firstName:'Rohan',lastName:'Mehta',fullName:'Rohan Mehta',dob:'2015-07-22',age:'10',classGroup:'Junior B',church:'Hope Assembly',location:'Bengaluru',parentName:'Amit Mehta',parentPhone:'••••5678',alerts:[{type:'medical',text:'Peanut allergy — carry EpiPen at all times'}],checkins:{Day1:'08:55'},checkouts:{},photoUrl:null,pinLocked:false},
+  {childId:'C-003',firstName:'Kavya',lastName:'Nair',fullName:'Kavya Nair',dob:'2017-01-10',age:'8',classGroup:'Junior A',church:'City Church',location:'Mysuru',parentName:'Sunita Nair',parentPhone:'••••9012',alerts:[],checkins:{},checkouts:{},photoUrl:null,pinLocked:false},
+  {childId:'C-004',firstName:'Arjun',lastName:'Patel',fullName:'Arjun Patel',dob:'2014-11-05',age:'11',classGroup:'Senior A',church:'Faith Chapel',location:'Bengaluru',parentName:'Deepak Patel',parentPhone:'••••3456',alerts:[{type:'needs',text:'Hearing aid — face him when speaking'}],checkins:{Day1:'09:10',Day2:'09:00'},checkouts:{Day1:'17:20'},photoUrl:null,pinLocked:false},
 ];
+const DEMO_PIN = '1234';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let cfg = JSON.parse(localStorage.getItem('ev_cfg2')||'{}');
+let currentDay = parseInt(cfg.day)||1;
+let scanner = null, scanning = false, scanMode = 'qr';
+let photoFile = null, photoKey = null;
+let activity = [];
+let searchTimer;
 
 // ── INIT ───────────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  if (config.scriptUrl || config.demo) {
-    document.getElementById('config-modal').classList.remove('show');
-    loadChildren();
+window.addEventListener('load',()=>{
+  if(cfg.apiUrl||cfg.demo){
+    document.getElementById('cfg-overlay').classList.remove('show');
+    updateDay();
+    if(document.getElementById('panel-scan').classList.contains('active')) startScanner();
   }
-  document.getElementById('day-label').textContent = 'Day ' + currentDay;
 });
 
-function loadDemo() {
-  config = { demo: true, day: 1 };
-  localStorage.setItem('checkin_config', JSON.stringify(config));
-  currentDay = 1;
-  document.getElementById('day-label').textContent = 'Day 1';
-  document.getElementById('config-modal').classList.remove('show');
-  children = DEMO;
-  updateStats();
-  toast('Demo data loaded', 'success');
+function saveConfig(){
+  const u=document.getElementById('cfg-api').value.trim().replace(/\/$/,'');
+  const d=parseInt(document.getElementById('cfg-day').value)||1;
+  const v=document.getElementById('cfg-dev').value.trim()||'volunteer';
+  if(!u){toast('Enter the API URL','err');return;}
+  cfg={apiUrl:u,day:d,device:v};
+  localStorage.setItem('ev_cfg2',JSON.stringify(cfg));
+  currentDay=d;
+  document.getElementById('cfg-overlay').classList.remove('show');
+  updateDay(); toast('Connected ✓','ok');
 }
-
-function saveConfig() {
-  const scriptUrl = document.getElementById('cfg-script-url').value.trim();
-  const day = parseInt(document.getElementById('cfg-day').value) || 1;
-  if (!scriptUrl) { toast('Please enter the Apps Script URL', 'error'); return; }
-  config = { scriptUrl, day };
-  localStorage.setItem('checkin_config', JSON.stringify(config));
-  currentDay = day;
-  document.getElementById('day-label').textContent = 'Day ' + day;
-  document.getElementById('config-modal').classList.remove('show');
-  loadChildren();
+function loadDemo(){
+  cfg={demo:true,day:1,device:'demo'};
+  localStorage.setItem('ev_cfg2',JSON.stringify(cfg));
+  currentDay=1;
+  document.getElementById('cfg-overlay').classList.remove('show');
+  updateDay(); toast('Demo mode active','warn');
 }
-
-async function loadChildren() {
-  if (config.demo) { children = DEMO; updateStats(); return; }
-  try {
-    const res = await fetch(config.scriptUrl + '?action=list');
-    const data = await res.json();
-    children = data;
-    updateStats();
-    toast('Loaded ' + children.length + ' children', 'success');
-  } catch(e) {
-    toast('Could not connect to sheet', 'error');
-  }
-}
+function showConfig(){document.getElementById('cfg-overlay').classList.add('show');}
+function updateDay(){document.getElementById('day-label').textContent=`Day ${currentDay} ▾`;}
 
 // ── TABS ───────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['scan','search','stats'][i] === tab);
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+function switchTab(tab){
+  const names=['scan','search','register','stats'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
-  if (tab === 'scan' && !scanActive) startScanner();
-  if (tab !== 'scan' && scanActive) stopScanner();
-  if (tab === 'stats') updateStats();
+  if(tab==='scan'&&!scanning) startScanner();
+  if(tab!=='scan'&&scanning) stopScanner();
+  if(tab==='stats') loadStats();
+}
+
+// ── SCAN MODE ──────────────────────────────────────────────────────────────
+function setScanMode(m){
+  scanMode=m;
+  document.getElementById('btn-qr').classList.toggle('active',m==='qr');
+  document.getElementById('btn-id').classList.toggle('active',m==='id');
+  document.getElementById('qr-section').style.display=m==='qr'?'':'none';
+  document.getElementById('id-section').style.display=m==='id'?'':'none';
+  if(m==='qr'&&!scanning) startScanner();
+  if(m==='id'){stopScanner();setTimeout(()=>document.getElementById('manual-id').focus(),100);}
 }
 
 // ── SCANNER ────────────────────────────────────────────────────────────────
-function startScanner() {
-  scanner = new Html5Qrcode('reader');
-  scanner.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 240, height: 240 } },
-    (decoded) => {
-      lookupById(decoded);
-      stopScanner();
-    },
-    () => {}
-  ).catch(() => {
-    document.getElementById('reader').innerHTML =
-      '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px">Camera not available — use manual entry below</div>';
-  });
-  scanActive = true;
+function startScanner(){
+  if(scanMode!=='qr') return;
+  scanner=new Html5Qrcode('reader');
+  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:210,height:210}},
+    decoded=>{lookupById(decoded.trim().toUpperCase());stopScanner();},
+    ()=>{}
+  ).then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
+   .catch(()=>{document.getElementById('reader').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Camera unavailable — use Child ID mode</div>';});
 }
-
-function stopScanner() {
-  if (scanner && scanActive) {
-    scanner.stop().catch(() => {});
-    scanActive = false;
-  }
-}
+function stopScanner(){if(scanner&&scanning){scanner.stop().catch(()=>{});scanning=false;}}
 
 // ── LOOKUP ─────────────────────────────────────────────────────────────────
-function lookupById(id) {
-  if (!id) return;
-  id = id.toUpperCase().replace(/\s/g,'');
-  const child = children.find(c => c.id === id);
-  renderResult(child, id);
+async function lookupById(id){
+  if(!id) return;
+  id=id.toUpperCase().trim();
+  try{
+    const c=await api('GET',`/child/${encodeURIComponent(id)}`);
+    renderChild(c);
+  }catch(err){
+    document.getElementById('child-result').innerHTML=
+      `<div class="child-card err">
+        <div style="color:var(--coral);font-weight:700;margin-bottom:6px">Not found: ${id}</div>
+        <div style="font-size:13px;color:var(--muted)">Check the ID and try again, or use the Search tab to find by name.</div>
+       </div>`;
+  }
 }
 
-function renderResult(child, searchId) {
-  const el = document.getElementById('child-result');
-  if (!child) {
-    el.innerHTML = `<div class="child-card error"><div style="color:var(--coral);font-weight:600;margin-bottom:6px">Not found: ${searchId}</div><div style="font-size:13px;color:var(--text-muted)">Check the ID and try again, or use the Search tab to find by name.</div></div>`;
-    return;
-  }
-  const todayKey = 'Day' + currentDay;
-  const checkedInToday = child.checkins.includes(todayKey);
-  const checkedOut = !!child.checkout;
-  const initials = child.name.split(' ').map(n=>n[0]).join('').slice(0,2);
-  const dayPills = [1,2,3,4,5].map(d => {
-    const key = 'Day'+d;
-    const isToday = d === currentDay;
-    const cls = isToday ? 'day-today' : child.checkins.includes(key) ? 'day-present' : 'day-absent';
-    return `<span class="day-pill ${cls}">Day ${d}</span>`;
+function renderChild(c){
+  const dk=`Day${currentDay}`;
+  const ci=!!(c.checkins?.[dk]), co=!!(c.checkouts?.[dk]);
+  const init=(c.firstName?.[0]||'')+(c.lastName?.[0]||'');
+  const photo=c.photoUrl
+    ?`<img class="child-photo" src="${c.photoUrl}" alt="" onerror="this.style.display='none'">`
+    :`<div class="child-avatar">${init}</div>`;
+  const sbadge=ci&&!co?'<span class="sbadge s-in">✓ In</span>'
+    :ci&&co?'<span class="sbadge s-out">Out</span>'
+    :'<span class="sbadge s-ab">Absent</span>';
+  const pills=[1,2,3,4,5].map(d=>{
+    const k=`Day${d}`;
+    const cls=d===currentDay?'dp-today':c.checkins?.[k]?'dp-present':'dp-absent';
+    return `<span class="dp ${cls}">D${d}</span>`;
   }).join('');
+  const alerts=(c.alerts||[]).map(a=>
+    `<div class="alert-box">⚠️ ${a.type==='medical'?'MEDICAL':'SUPPORT'}: ${a.text}</div>`
+  ).join('');
+  const checkoutTime=c.checkouts?.[dk]?` — ${fmtTime(c.checkouts[dk])}`:'';
 
-  el.innerHTML = `
+  document.getElementById('child-result').innerHTML=`
     <div class="child-card found">
-      ${child.alert ? `<div class="alert-box">⚠️ ${child.alert}</div>` : ''}
+      ${alerts}
       <div class="child-header">
-        <div class="child-avatar">${initials}</div>
-        <div>
-          <div class="child-name">${child.name}</div>
-          <div class="child-id">${child.id}</div>
+        ${photo}
+        <div style="flex:1;min-width:0">
+          <div class="child-name">${c.fullName||c.firstName+' '+c.lastName}</div>
+          <div class="child-id">${c.childId}</div>
+          ${c.classGroup?`<div class="child-class">${c.classGroup}</div>`:''}
         </div>
-        <div style="margin-left:auto">
-          ${checkedInToday && !checkedOut
-            ? '<span class="status-badge status-in">✓ Checked in</span>'
-            : checkedInToday && checkedOut
-            ? '<span class="status-badge status-out">Checked out</span>'
-            : '<span class="status-badge status-out">Not checked in</span>'}
+        <div>${sbadge}</div>
+      </div>
+      <div class="info-row"><span class="info-label">Parent</span><span class="info-val">${c.parentName}</span></div>
+      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${c.parentPhone}</span></div>
+      ${c.dob?`<div class="info-row"><span class="info-label">DOB</span><span class="info-val">${c.dob}</span></div>`:''}
+      ${c.church?`<div class="info-row"><span class="info-label">Church</span><span class="info-val">${c.church}</span></div>`:''}
+      ${c.location?`<div class="info-row"><span class="info-label">Location</span><span class="info-val">${c.location}</span></div>`:''}
+      <div class="info-row"><span class="info-label">Days</span><div class="day-grid">${pills}</div></div>
+      <div class="pin-box" id="pin-box">
+        <label>Ask parent to say their PIN — enter it here</label>
+        <div class="pin-row">
+          <input type="number" id="pin-inp" placeholder="••••" oninput="verifyPin('${c.childId}')">
+          <button class="btn btn-outline btn-sm" onclick="closePinBox()">✕</button>
         </div>
+        <div class="pin-err" id="pin-err"></div>
       </div>
-      <div class="info-row"><span class="info-label">Parent</span><span class="info-value">${child.parent}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${child.phone}</span></div>
-      ${child.notes ? `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${child.notes}</span></div>` : ''}
-      <div class="info-row"><span class="info-label">Attendance</span><div class="day-grid">${dayPills}</div></div>
-      <div class="pin-verify" id="pin-box">
-        <label>Enter parent's PIN to confirm checkout</label>
-        <input type="number" id="pin-input" placeholder="••••" maxlength="6" oninput="checkPin('${child.id}','${child.pin}')">
-      </div>
+      ${c.pinLocked?`<div class="locked-box">🔒 This record is locked after too many wrong PIN attempts. Contact coordinator.</div>`:''}
       <div class="action-row">
-        ${!checkedInToday
-          ? `<button class="btn btn-teal" onclick="checkIn('${child.id}')">✓ Check in — Day ${currentDay}</button>`
-          : !checkedOut
-          ? `<button class="btn btn-coral" onclick="showPinBox()">Check out</button>`
-          : `<button class="btn btn-outline" disabled>Already checked out</button>`}
+        ${!ci
+          ?`<button class="btn btn-teal" onclick="doCheckIn('${c.childId}')">✓ Check in — Day ${currentDay}</button>`
+          :!co&&!c.pinLocked
+          ?`<button class="btn btn-coral" onclick="showPin()">Check out →</button>`
+          :co
+          ?`<button class="btn btn-outline" disabled>Checked out${checkoutTime}</button>`
+          :''}
+        <button class="btn btn-outline btn-sm" onclick="lookupById('${c.childId}')">↻</button>
       </div>
     </div>`;
 }
 
-function showPinBox() {
-  document.getElementById('pin-box').classList.add('show');
-  document.getElementById('pin-input').focus();
-}
+function showPin(){document.getElementById('pin-box').classList.add('show');document.getElementById('pin-inp').focus();}
+function closePinBox(){document.getElementById('pin-box').classList.remove('show');document.getElementById('pin-inp').value='';document.getElementById('pin-err').textContent='';}
 
-function checkPin(childId, correctPin) {
-  const entered = document.getElementById('pin-input').value;
-  if (entered.length < 4) return;
-  if (entered === correctPin) {
-    checkOut(childId);
-  } else if (entered.length >= correctPin.length) {
-    document.getElementById('pin-input').style.borderColor = 'var(--coral)';
-    toast('Incorrect PIN — try again', 'error');
-    setTimeout(() => {
-      document.getElementById('pin-input').value = '';
-      document.getElementById('pin-input').style.borderColor = '';
-    }, 1000);
+async function verifyPin(childId){
+  const pin=document.getElementById('pin-inp').value;
+  if(pin.length<4) return;
+  try{
+    await api('POST','/checkout',{childId,pin,day:currentDay,volunteerDevice:cfg.device});
+    toast('Checked out ✓','ok');
+    addAct('out',childId);
+    closePinBox();
+    await lookupById(childId);
+  }catch(err){
+    const m=err.message||'';
+    if(m.toLowerCase().includes('lock')){
+      document.getElementById('pin-err').textContent='🔒 Locked. Contact coordinator.';
+      toast('Record locked','err');
+    }else{
+      const rem=m.match(/(\d+) attempt/);
+      document.getElementById('pin-err').textContent=rem?`Wrong PIN — ${rem[1]} attempt${rem[1]==='1'?'':'s'} remaining`:'Wrong PIN — try again';
+      document.getElementById('pin-inp').value='';
+      document.getElementById('pin-inp').focus();
+    }
   }
 }
 
-async function checkIn(childId) {
-  const child = children.find(c => c.id === childId);
-  if (!child) return;
-  const todayKey = 'Day' + currentDay;
-  if (!child.checkins.includes(todayKey)) child.checkins.push(todayKey);
-  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-  activity.unshift({ type:'in', name: child.name, time });
-  await syncRecord(child, 'checkin');
-  renderResult(child, child.id);
-  updateStats();
-  toast(child.name + ' checked in ✓', 'success');
-}
-
-async function checkOut(childId) {
-  const child = children.find(c => c.id === childId);
-  if (!child) return;
-  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-  child.checkout = time;
-  activity.unshift({ type:'out', name: child.name, time });
-  await syncRecord(child, 'checkout');
-  renderResult(child, child.id);
-  updateStats();
-  toast(child.name + ' checked out ✓', 'success');
-}
-
-async function syncRecord(child, action) {
-  if (config.demo) return;
-  try {
-    await fetch(config.scriptUrl, {
-      method:'POST',
-      body: JSON.stringify({ action, childId: child.id, day: currentDay, time: new Date().toISOString() })
-    });
-  } catch(e) { console.warn('Sync failed', e); }
+async function doCheckIn(childId){
+  try{
+    await api('POST','/checkin',{childId,day:currentDay,volunteerDevice:cfg.device});
+    toast('Checked in ✓','ok');
+    addAct('in',childId);
+    await lookupById(childId);
+  }catch(err){toast('Check-in failed: '+err.message,'err');}
 }
 
 // ── SEARCH ─────────────────────────────────────────────────────────────────
-function doSearch(q) {
-  const el = document.getElementById('search-results');
-  if (!q.trim()) { el.innerHTML = '<div class="empty-state">Start typing to search</div>'; return; }
-  const matches = children.filter(c =>
-    c.name.toLowerCase().includes(q.toLowerCase()) ||
-    c.parent.toLowerCase().includes(q.toLowerCase()) ||
-    c.id.toLowerCase().includes(q.toLowerCase())
-  );
-  if (!matches.length) { el.innerHTML = '<div class="empty-state">No children found</div>'; return; }
-  el.innerHTML = matches.map(c => {
-    const todayKey = 'Day' + currentDay;
-    const status = c.checkins.includes(todayKey) ? (c.checkout ? '🔴 Out' : '🟢 In') : '⚪ Not in';
-    const initials = c.name.split(' ').map(n=>n[0]).join('').slice(0,2);
-    return `<div class="child-list-item" onclick="selectChild('${c.id}')">
-      <div class="child-list-avatar">${initials}</div>
-      <div class="child-list-info">
-        <div class="child-list-name">${c.name} ${c.alert ? '⚠️' : ''}</div>
-        <div class="child-list-meta">${c.id} · ${c.parent} · ${status}</div>
-      </div>
-    </div>`;
-  }).join('');
+async function doSearch(q){
+  clearTimeout(searchTimer);
+  const el=document.getElementById('search-results');
+  if(!q||q.length<2){el.innerHTML='<div class="empty">Start typing to search</div>';return;}
+  searchTimer=setTimeout(async()=>{
+    try{
+      const d=await api('GET',`/search?q=${encodeURIComponent(q)}&day=${currentDay}`);
+      if(!d.results?.length){el.innerHTML='<div class="empty">No results found</div>';return;}
+      el.innerHTML=d.results.map(c=>{
+        const sc=c.status==='in'?'ist-in':c.status==='out'?'ist-out':'ist-ab';
+        const sl=c.status==='in'?'In':c.status==='out'?'Out':'Absent';
+        const av=c.fullName.split(' ').map(n=>n[0]).join('').slice(0,2);
+        return `<div class="child-item" onclick="selectChild('${c.childId}')">
+          <div class="item-av">${av}</div>
+          <div class="item-info">
+            <div class="item-name">${c.fullName}${c.hasAlert?' ⚠️':''}</div>
+            <div class="item-meta">${c.childId}${c.classGroup?' · '+c.classGroup:''}${c.location?' · '+c.location:''}</div>
+          </div>
+          <span class="item-st ${sc}">${sl}</span>
+        </div>`;
+      }).join('');
+    }catch{el.innerHTML='<div class="empty">Search failed — check connection</div>';}
+  },350);
+}
+function selectChild(id){switchTab('scan');lookupById(id);}
+
+// ── REGISTRATION ───────────────────────────────────────────────────────────
+function handlePhoto(inp){
+  const f=inp.files?.[0];if(!f) return;
+  photoFile=f;
+  const url=URL.createObjectURL(f);
+  document.getElementById('photo-prev').src=url;
+  document.getElementById('photo-prev').style.display='block';
+  document.getElementById('photo-ph').style.display='none';
 }
 
-function selectChild(id) {
-  switchTab('scan');
-  lookupById(id);
+async function submitReg(){
+  const fn=document.getElementById('r-fn').value.trim();
+  const ln=document.getElementById('r-ln').value.trim();
+  const pn=document.getElementById('r-pn').value.trim();
+  const pp=document.getElementById('r-pp').value.trim();
+  const code=document.getElementById('r-code').value.trim();
+  if(!fn||!ln||!pn||!pp||!code){toast('Fill in all required fields (*)','err');return;}
+
+  photoKey=null;
+  if(photoFile){
+    try{
+      toast('Uploading photo…','warn');
+      const ur=await api('POST','/photo-upload-url',{contentType:photoFile.type});
+      await fetch(ur.uploadUrl,{method:'PUT',body:photoFile,headers:{'Content-Type':photoFile.type}});
+      photoKey=ur.photoKey;
+    }catch{toast('Photo upload failed — continuing without photo','warn');}
+  }
+
+  try{
+    toast('Registering…','warn');
+    const res=await api('POST','/register',{
+      firstName:fn, lastName:ln,
+      dob:document.getElementById('r-dob').value,
+      age:document.getElementById('r-age').value,
+      participantPhone:document.getElementById('r-cp').value.trim(),
+      classGroup:document.getElementById('r-cls').value.trim(),
+      parentName:pn, parentPhone:pp,
+      church:document.getElementById('r-ch').value.trim(),
+      location:document.getElementById('r-loc').value.trim(),
+      medical:document.getElementById('r-med').value.trim(),
+      specialNeeds:document.getElementById('r-sn').value.trim(),
+      photoKey,
+    },{'x-volunteer-code':code});
+    document.getElementById('reg-id-disp').textContent=res.childId;
+    document.getElementById('reg-wa-msg').textContent=
+      res.whatsappStatus==='sent'
+        ?'✓ WhatsApp with QR code sent to parent.'
+        :'⚠️ WhatsApp failed — give parent their Child ID and PIN verbally: '+res.childId;
+    document.getElementById('reg-form').style.display='none';
+    document.getElementById('reg-done').style.display='block';
+    addAct('reg',res.childId);
+    toast(`${fn} ${ln} registered as ${res.childId}`,'ok');
+  }catch(err){toast('Registration failed: '+err.message,'err');}
+}
+
+function resetReg(){
+  document.querySelectorAll('#reg-form input,#reg-form textarea').forEach(el=>el.value='');
+  document.getElementById('photo-prev').style.display='none';
+  document.getElementById('photo-ph').style.display='block';
+  photoFile=null;photoKey=null;
+  document.getElementById('reg-form').style.display='block';
+  document.getElementById('reg-done').style.display='none';
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────────
-function updateStats() {
-  const todayKey = 'Day' + currentDay;
-  const inToday = children.filter(c => c.checkins.includes(todayKey)).length;
-  const outToday = children.filter(c => c.checkins.includes(todayKey) && c.checkout).length;
-  document.getElementById('stat-in').textContent = inToday;
-  document.getElementById('stat-out').textContent = outToday;
-  document.getElementById('stat-present').textContent = inToday - outToday;
-  document.getElementById('stat-total').textContent = children.length;
-
-  const listEl = document.getElementById('activity-list');
-  if (!activity.length) {
-    listEl.innerHTML = '<div class="empty-state" style="padding:20px">No activity yet today</div>';
-    return;
-  }
-  listEl.innerHTML = activity.slice(0,20).map(a =>
-    `<div class="activity-item">
-      <div class="activity-dot ${a.type==='in'?'dot-in':'dot-out'}"></div>
-      <span>${a.name} — ${a.type==='in'?'checked in':'checked out'}</span>
-      <span class="activity-time">${a.time}</span>
-    </div>`
+async function loadStats(){
+  try{
+    const d=await api('GET',`/stats?day=${currentDay}`);
+    document.getElementById('s-in').textContent=d.checkedIn??'–';
+    document.getElementById('s-out').textContent=d.checkedOut??'–';
+    document.getElementById('s-pres').textContent=d.present??'–';
+    document.getElementById('s-tot').textContent=d.total??'–';
+    if(d.byLocation&&Object.keys(d.byLocation).length){
+      document.getElementById('loc-tbl').style.display='';
+      document.getElementById('loc-rows').innerHTML=Object.entries(d.byLocation)
+        .sort((a,b)=>b[1].in-a[1].in)
+        .map(([loc,v])=>`<div class="bk-row"><span class="bk-name">${loc}</span><span class="bk-n c-in">${v.in}</span><span class="bk-n c-out">${v.out}</span><span class="bk-n">${v.total}</span></div>`)
+        .join('');
+    }
+  }catch{}
+  const el=document.getElementById('act-list');
+  if(!activity.length){el.innerHTML='<div class="empty" style="padding:16px">No activity on this device yet</div>';return;}
+  el.innerHTML=activity.slice(0,20).map(a=>
+    `<div class="af-item"><div class="af-dot ${a.t==='in'?'d-in':a.t==='out'?'d-out':'d-reg'}"></div>
+    <span>${a.id} — ${a.t==='in'?'checked in':a.t==='out'?'checked out':'registered'}</span>
+    <span class="af-time">${a.time}</span></div>`
   ).join('');
 }
+function addAct(t,id){activity.unshift({t,id,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})});}
 
-// ── TOAST ──────────────────────────────────────────────────────────────────
-function toast(msg, type='') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast show' + (type ? ' '+type : '');
-  setTimeout(() => el.classList.remove('show'), 3000);
+// ── API ────────────────────────────────────────────────────────────────────
+async function api(method,path,body,extraHeaders={}){
+  if(cfg.demo) return demoApi(method,path,body);
+  const opts={method,headers:{'Content-Type':'application/json',...extraHeaders}};
+  if(body&&method!=='GET') opts.body=JSON.stringify(body);
+  const res=await fetch(cfg.apiUrl+path,opts);
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error||`HTTP ${res.status}`);
+  return data;
+}
+
+// ── DEMO API ───────────────────────────────────────────────────────────────
+function demoApi(method,path,body){
+  if(path.startsWith('/child/')){
+    const id=decodeURIComponent(path.split('/child/')[1]);
+    const c=DEMO.find(x=>x.childId===id);
+    if(!c) return Promise.reject(new Error('Not found'));
+    return Promise.resolve(JSON.parse(JSON.stringify(c)));
+  }
+  if(path.startsWith('/search')){
+    const q=new URLSearchParams(path.split('?')[1]||'').get('q')||'';
+    const r=DEMO.filter(c=>c.fullName.toLowerCase().includes(q.toLowerCase())||c.parentName.toLowerCase().includes(q.toLowerCase()))
+      .map(c=>({childId:c.childId,fullName:c.fullName,classGroup:c.classGroup,church:c.church,location:c.location,parentName:c.parentName,hasAlert:c.alerts.length>0,
+        status:c.checkins[`Day${currentDay}`]?(c.checkouts[`Day${currentDay}`]?'out':'in'):'absent'}));
+    return Promise.resolve({results:r,count:r.length});
+  }
+  if(path==='/checkin'){
+    const c=DEMO.find(x=>x.childId===body.childId);
+    if(c) c.checkins[`Day${body.day}`]=new Date().toISOString();
+    return Promise.resolve({ok:true});
+  }
+  if(path==='/checkout'){
+    const c=DEMO.find(x=>x.childId===body.childId);
+    if(!c) return Promise.reject(new Error('Not found'));
+    if(body.pin!==DEMO_PIN) return Promise.reject(new Error('Incorrect PIN. 2 attempts remaining.'));
+    c.checkouts[`Day${body.day}`]=new Date().toISOString();
+    return Promise.resolve({ok:true});
+  }
+  if(path==='/register') return Promise.resolve({ok:true,childId:'C-DEMO',whatsappStatus:'sent'});
+  if(path==='/photo-upload-url') return Promise.resolve({uploadUrl:'#demo',photoKey:'demo.jpg'});
+  if(path.startsWith('/stats')){
+    const dk=`Day${currentDay}`;
+    const ci=DEMO.filter(c=>c.checkins[dk]).length;
+    const co=DEMO.filter(c=>c.checkouts[dk]).length;
+    return Promise.resolve({total:DEMO.length,checkedIn:ci,checkedOut:co,present:ci-co,byLocation:{'Bengaluru':{total:3,in:ci,out:co},'Mysuru':{total:1,in:0,out:0}}});
+  }
+  return Promise.resolve({ok:true});
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function fmtTime(iso){try{return new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});}catch{return iso;}}
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show'+(type?' '+type:'');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),3200);
 }
 </script>
 </body>
