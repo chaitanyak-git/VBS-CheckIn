@@ -50,6 +50,8 @@ header h1{font-size:16px;font-weight:700}
 .info-row{display:flex;gap:8px;align-items:baseline;margin-bottom:6px;font-size:14px}
 .info-label{color:var(--muted);font-size:11px;min-width:84px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.4px}
 .info-val{color:var(--text);font-weight:500}
+.info-section-divider{border:none;border-top:1px solid var(--border);margin:10px 0 8px}
+.info-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:6px}
 .sbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
 .s-in{background:var(--teal-l);color:var(--success)}
 .s-out{background:var(--gray-l);color:var(--gray)}
@@ -342,11 +344,25 @@ function setScanMode(m){
 function startScanner(){
   if(scanMode!=='qr') return;
   scanner=new Html5Qrcode('reader');
-  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:210,height:210}},
-    decoded=>{lookupById(decoded.trim().toUpperCase());stopScanner();},
-    ()=>{}
-  ).then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
-   .catch(()=>{document.getElementById('reader').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Camera unavailable — use Child ID mode</div>';});
+  const config={fps:10,qrbox:{width:210,height:210}};
+  const onDecode=decoded=>{lookupById(decoded.trim().toUpperCase());stopScanner();};
+  // Try rear camera first (ideal = soft constraint, won't hard-fail)
+  scanner.start({facingMode:{ideal:'environment'}},config,onDecode,()=>{})
+    .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
+    .catch(()=>{
+      // Rear camera failed — retry with any available camera
+      scanner.start({},config,onDecode,()=>{})
+        .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
+        .catch(err=>{
+          const msg=err&&err.message?err.message:'permission denied or no camera found';
+          document.getElementById('reader').innerHTML=
+            '<div style="padding:24px;text-align:center;font-size:13px">'+
+            '<div style="color:var(--red,#c0392b);margin-bottom:8px">⚠️ Camera unavailable</div>'+
+            '<div style="color:var(--muted);margin-bottom:12px;font-size:11px">'+msg+'</div>'+
+            '<button onclick="setScanMode(\'id\')" style="padding:8px 16px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px">Use Child ID instead</button>'+
+            '</div>';
+        });
+    });
 }
 function stopScanner(){if(scanner&&scanning){scanner.stop().catch(()=>{});scanning=false;}}
 
@@ -398,12 +414,15 @@ function renderChild(c){
         </div>
         <div>${sbadge}</div>
       </div>
-      <div class="info-row"><span class="info-label">Parent</span><span class="info-val">${c.parentName}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${c.parentPhone}</span></div>
+      ${c.classGroup?`<div class="info-row"><span class="info-label">Class</span><span class="info-val">${c.classGroup}</span></div>`:''}
       ${c.dob?`<div class="info-row"><span class="info-label">DOB</span><span class="info-val">${c.dob}</span></div>`:''}
       ${c.church?`<div class="info-row"><span class="info-label">Church</span><span class="info-val">${c.church}</span></div>`:''}
       ${c.location?`<div class="info-row"><span class="info-label">Location</span><span class="info-val">${c.location}</span></div>`:''}
       <div class="info-row"><span class="info-label">Days</span><div class="day-grid">${pills}</div></div>
+      <div class="info-section-divider"></div>
+      <div class="info-section-label">Parent / Guardian</div>
+      <div class="info-row"><span class="info-label">Name</span><span class="info-val">${c.parentName}</span></div>
+      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${c.parentPhone}</span></div>
       <div class="pin-box" id="pin-box">
         <label>Ask parent to say their PIN — enter it here</label>
         <div class="pin-row">
