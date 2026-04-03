@@ -71,7 +71,10 @@ header h1{font-size:16px;font-weight:700}
 .pin-row input{flex:1;padding:12px;border:1.5px solid #F0997B;border-radius:var(--rs);font-size:24px;letter-spacing:8px;text-align:center;background:var(--bg);font-family:monospace}
 .pin-row input:focus{outline:none;border-color:var(--coral)}
 .pin-err{font-size:12px;color:var(--danger);margin-top:6px}
-.locked-box{background:#FCEBEB;border:1.5px solid #F09595;border-radius:var(--rs);padding:12px;margin-top:10px;font-size:13px;color:var(--danger);font-weight:500}
+.locked-box{background:#FCEBEB;border:1.5px solid #F09595;border-radius:var(--rs);padding:12px;margin-top:10px;font-size:13px;color:var(--danger);font-weight:500;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.override-box{background:#FFF8EC;border:1.5px solid #F5C97A;border-radius:var(--rs);padding:14px;margin-top:10px;display:none}
+.override-box.show{display:block}
+.override-box label{font-size:11px;color:#8A6000;font-weight:700;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px}
 /* search */
 .search-wrap{position:relative;margin-bottom:12px}
 .search-wrap input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--bg);color:var(--text)}
@@ -213,11 +216,18 @@ header h1{font-size:16px;font-weight:700}
     <div class="fg"><label>Special needs</label><textarea id="r-sn" placeholder="Any additional support required. Write 'None' if not applicable."></textarea></div>
 
     <p class="sec-label">Child photo</p>
-    <div class="photo-zone" onclick="document.getElementById('photo-in').click()">
+    <div class="photo-zone">
       <img id="photo-prev" class="photo-prev" src="" style="display:none">
-      <div id="photo-ph"><div class="photo-hint"><strong>📷 Tap to take photo</strong>Shown to volunteers at pickup for identity check</div></div>
+      <div id="photo-ph">
+        <div class="photo-hint" style="margin-bottom:12px">Shown to volunteers at pickup for identity check</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('photo-capture').click()">📷 Camera</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('photo-file').click()">🖼 Upload</button>
+        </div>
+      </div>
     </div>
-    <input type="file" id="photo-in" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="photo-capture" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="photo-file"    accept="image/*"                       style="display:none" onchange="handlePhoto(this)">
 
     <div class="fg" style="margin-top:4px"><label>Volunteer access code *</label><input type="password" id="r-code" placeholder="Ask your event coordinator" autocomplete="off"></div>
     <button class="btn btn-teal btn-full" style="margin-top:10px" onclick="submitReg()">Register &amp; Send WhatsApp →</button>
@@ -342,6 +352,7 @@ function setScanMode(m){
 
 // ── SCANNER ────────────────────────────────────────────────────────────────
 function showScanError(msg){
+  console.error('[QR Scanner]', msg);
   document.getElementById('reader').innerHTML=
     '<div style="padding:24px;text-align:center;font-size:13px">'+
     '<div style="color:var(--red,#c0392b);margin-bottom:8px">⚠️ Camera unavailable</div>'+
@@ -351,26 +362,48 @@ function showScanError(msg){
 }
 
 function startScanner(){
-  if(scanMode!=='qr') return;
+  if(scanMode!=='qr'||scanning) return;
+
+  // Camera API requires HTTPS (or localhost)
+  if(!window.isSecureContext){
+    showScanError('Camera requires HTTPS. Open this page via https:// or use Child ID mode.');
+    return;
+  }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    showScanError('Your browser does not support camera access. Try Chrome or Safari over HTTPS.');
+    return;
+  }
+
   const config={fps:10,qrbox:{width:210,height:210}};
   const onDecode=decoded=>{lookupById(decoded.trim().toUpperCase());stopScanner();};
 
-  // getCameras() triggers the browser permission prompt and returns camera list
-  Html5Qrcode.getCameras().then(cameras=>{
-    if(!cameras||cameras.length===0){showScanError('No cameras found on this device.');return;}
-    // Prefer rear-facing camera; fall back to the first available
-    const rear=cameras.find(c=>/back|rear|environment/i.test(c.label));
-    const camId=(rear||cameras[0]).id;
-    scanner=new Html5Qrcode('reader');
-    scanner.start(camId,config,onDecode,()=>{})
-      .then(()=>{scanning=true;document.getElementById('rph').style.display='none';})
-      .catch(err=>showScanError(err&&err.message?err.message:'Failed to open camera.'));
-  }).catch(err=>{
-    const msg=err&&err.message?err.message:'Permission denied or camera not accessible.';
-    showScanError(msg);
-  });
+  // getUserMedia triggers the permission prompt; once granted, start html5-qrcode
+  // with the same constraint — permission is already held so no second prompt needed.
+  // Skipping getCameras() avoids the iOS Safari issue where enumerateDevices()
+  // returns empty after the test stream is stopped.
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
+    .then(stream=>{
+      stream.getTracks().forEach(t=>t.stop());
+      scanner=new Html5Qrcode('reader');
+      // html5-qrcode requires a plain string for facingMode, not {ideal:...}
+      return scanner.start({facingMode:'environment'},config,onDecode,()=>{})
+        .catch(()=>{
+          // No rear camera — try front camera
+          scanner=new Html5Qrcode('reader');
+          return scanner.start({facingMode:'user'},config,onDecode,()=>{});
+        });
+    })
+    .then(()=>{scanning=true;const rph=document.getElementById('rph');if(rph)rph.style.display='none';})
+    .catch(err=>{console.error('[QR Scanner]',err);showScanError(err&&(err.message||err.name||String(err))||'Camera access failed.');});
 }
-function stopScanner(){if(scanner&&scanning){scanner.stop().catch(()=>{});scanning=false;}}
+function stopScanner(){
+  if(scanner){
+    if(scanning) scanner.stop().catch(()=>{});
+    scanner.clear().catch(()=>{});
+    scanner=null;
+  }
+  scanning=false;
+}
 
 // ── LOOKUP ─────────────────────────────────────────────────────────────────
 async function lookupById(id){
@@ -437,7 +470,20 @@ function renderChild(c){
         </div>
         <div class="pin-err" id="pin-err"></div>
       </div>
-      ${c.pinLocked?`<div class="locked-box">🔒 This record is locked after too many wrong PIN attempts. Contact coordinator.</div>`:''}
+      ${c.pinLocked?`
+      <div class="locked-box">
+        <span>🔒 Locked after too many wrong PIN attempts.</span>
+        <button class="btn btn-outline btn-sm" onclick="showOverride()">Coordinator Override</button>
+      </div>
+      <div class="override-box" id="override-box">
+        <label>Coordinator code — unlock and check out</label>
+        <div class="pin-row">
+          <input type="password" id="override-inp" placeholder="Enter coordinator code" style="flex:1">
+          <button class="btn btn-coral btn-sm" onclick="doOverride('${c.childId}')">Confirm</button>
+          <button class="btn btn-outline btn-sm" onclick="closeOverride()">✕</button>
+        </div>
+        <div class="pin-err" id="override-err"></div>
+      </div>`:''}
       <div class="action-row">
         ${!ci
           ?`<button class="btn btn-teal" onclick="doCheckIn('${c.childId}')">✓ Check in — Day ${currentDay}</button>`
@@ -453,6 +499,22 @@ function renderChild(c){
 
 function showPin(){document.getElementById('pin-box').classList.add('show');document.getElementById('pin-inp').focus();}
 function closePinBox(){document.getElementById('pin-box').classList.remove('show');document.getElementById('pin-inp').value='';document.getElementById('pin-err').textContent='';}
+function showOverride(){document.getElementById('override-box').classList.add('show');document.getElementById('override-inp').focus();}
+function closeOverride(){document.getElementById('override-box').classList.remove('show');document.getElementById('override-inp').value='';document.getElementById('override-err').textContent='';}
+async function doOverride(childId){
+  const code=document.getElementById('override-inp').value.trim();
+  if(!code) return;
+  try{
+    await api('POST','/checkout',{childId,pin:'',day:currentDay,volunteerDevice:cfg.device,coordinatorOverride:true},{'x-volunteer-code':code});
+    toast('Override successful — child checked out','ok');
+    closeOverride();
+    await lookupById(childId);
+  }catch(err){
+    document.getElementById('override-err').textContent=err.message||'Override failed — check coordinator code';
+    document.getElementById('override-inp').value='';
+    document.getElementById('override-inp').focus();
+  }
+}
 
 async function verifyPin(childId){
   const pin=document.getElementById('pin-inp').value;
