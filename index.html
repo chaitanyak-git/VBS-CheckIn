@@ -339,7 +339,12 @@ function loadDemo(){
   document.getElementById('cfg-overlay').classList.remove('show');
   updateDay(); toast('Demo mode active','warn');
 }
-function showConfig(){document.getElementById('cfg-overlay').classList.add('show');}
+function showConfig(){
+  document.getElementById('cfg-api').value  = cfg.apiUrl  || '';
+  document.getElementById('cfg-day').value  = cfg.day     || 1;
+  document.getElementById('cfg-dev').value  = cfg.device  || '';
+  document.getElementById('cfg-overlay').classList.add('show');
+}
 function updateDay(){document.getElementById('day-label').textContent=`Day ${currentDay} ▾`;}
 
 // ── TABS ───────────────────────────────────────────────────────────────────
@@ -685,6 +690,7 @@ function addAct(t,id){activity.unshift({t,id,time:new Date().toLocaleTimeString(
 // ── API ────────────────────────────────────────────────────────────────────
 async function api(method,path,body,extraHeaders={}){
   if(cfg.demo) return demoApi(method,path,body);
+  if(!cfg.apiUrl){showConfig();throw new Error('API URL not configured — please enter the API Gateway URL.');}
   const opts={method,headers:{'Content-Type':'application/json',...extraHeaders}};
   if(body&&method!=='GET') opts.body=JSON.stringify(body);
   const res=await fetch(cfg.apiUrl+path,opts);
